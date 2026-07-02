@@ -7,14 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 class Order extends Model
 {
     protected $fillable = [
-        'user_id', 'address_id', 'payment_method', 'delivery_timing',
-        'delivery_date_time', 'cart_items', 'subtotal', 'delivery_fee',
-        'service_fee', 'total', 'status'
+        'user_id', 'rider_id', 'delivery_timing', 'delivery_date_time', 'status', 
+        'payment_method', 'subtotal_kobo', 'delivery_fee_kobo', 'discount_kobo', 
+        'total_kobo', 'address_label', 'delivery_address', 'latitude', 'longitude', 'delivery_completed_at'
     ];
 
-    // This converts JSON text into arrays seamlessly when read/written
-    protected $casts = [
-        'cart_items' => 'array',
-        'delivery_date_time' => 'datetime'
-    ];
+    public function items() {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    public function rider() {
+        return $this->belongsTo(Rider::class);
+    }
 }
