@@ -4,6 +4,9 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\OrderController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\UserSettingsController;
+use App\Http\Controllers\Api\CartOrderController;
+use App\Http\Controllers\Api\DistributorController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -27,4 +30,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders', [OrderController::class, 'store']);
     Route::get('/orders/{id}', [OrderController::class, 'show']);
     Route::get('/orders/{id}/track', [OrderController::class, 'track']);
+});
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user/settings', [UserSettingsController::class, 'getSettings']);
+    Route::put('/user/profile/update', [UserSettingsController::class, 'updateProfile']);
+    Route::patch('/user/settings/toggle', [UserSettingsController::class, 'togglePreference']);
+    Route::post('/user/inactivate-request', [UserSettingsController::class, 'requestInactivation']);
+});
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user/profile', [AuthController::class, 'profile']);
+});
+
+
+Route::get('/shop/info', [DistributorController::class, 'getShopInfo']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/distributor/apply', [DistributorController::class, 'submitApplication']);
 });

@@ -6,23 +6,24 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        Schema::create('riders', function (Blueprint $table) {
+        Schema::create('delivery_tiers', function (Blueprint $table) {
             $table->id();
-            $table->string('full_name');
-            $table->string('phone')->unique();
-            $table->string('vehicle_type')->default('Motorcycle');
-            $table->string('motorcycle_reg_number')->nullable();
-            $table->decimal('current_latitude', 10, 8)->nullable();
-            $table->decimal('current_longitude', 11, 8)->nullable();
-            $table->boolean('is_available')->default(true);
+            $table->string('location_name'); // e.g., Uyo, Abak, Ikot Ekpene
+            $table->integer('fee_kobo')->default(50000); // 500 NGN default in kobo
             $table->timestamps();
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        Schema::dropIfExists('riders');
+        Schema::dropIfExists('delivery_tiers');
     }
 };
