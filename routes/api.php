@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\UserSettingsController;
 use App\Http\Controllers\Api\CartOrderController;
 use App\Http\Controllers\Api\DistributorController;
+use App\Http\Controllers\Api\DriverDashboardController;
+use App\Http\Controllers\Api\DriverTaskController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -46,4 +48,15 @@ Route::get('/shop/info', [DistributorController::class, 'getShopInfo']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/distributor/apply', [DistributorController::class, 'submitApplication']);
+});
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/driver/dashboard', [DriverDashboardController::class, 'getDashboardStats']);
+    Route::post('/driver/location-update', [DriverDashboardController::class, 'updateDriverLocation']);
+});
+Route::prefix('driver')->group(function () {
+    // Add this route to handle your dashboard tasks query
+    Route::get('/tasks', [DriverTaskController::class, 'index']);
+    
+    // Ensure your other existing dashboard endpoints are here too
+    Route::get('/dashboard', [DriverDashboardController::class, 'index']);
 });
