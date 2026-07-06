@@ -50,7 +50,7 @@ return [
     |
     */
 
-    'expiration' => null,
+    'expiration' => 43200, // 30 days in minutes
 
     /*
     |--------------------------------------------------------------------------
@@ -84,4 +84,5 @@ return [
         'validate_csrf_token' => ValidateCsrfToken::class,
     ],
 
+   
 ];
