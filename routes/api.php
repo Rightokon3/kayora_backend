@@ -9,7 +9,7 @@ use App\Http\Controllers\Api\DriverStatusController;
 use App\Http\Controllers\Api\DriverLocationController;
 use App\Http\Controllers\Api\DriverTaskController;
 use App\Http\Controllers\Api\DriverStatsController;
-
+use App\Http\Controllers\Api\CartOrderController;
 /* ============================================================
    CUSTOMER / USER APP — unprefixed, its own auth guard via User model
 ============================================================ */
@@ -19,7 +19,7 @@ Route::get('/shop/info', [App\Http\Controllers\Api\DistributorController::class,
 Route::get('/products/{id}', [App\Http\Controllers\Api\ProductController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user/profile', [AuthController::class, 'profile']);
+    Route::get('/user-profile', [AuthController::class, 'profile']);
     Route::put('/user/profile/update', [App\Http\Controllers\Api\UserSettingsController::class, 'updateProfile']);
     Route::get('/user/settings', [App\Http\Controllers\Api\UserSettingsController::class, 'getSettings']);
     Route::patch('/user/settings/toggle', [App\Http\Controllers\Api\UserSettingsController::class, 'togglePreference']);
@@ -27,8 +27,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/products', [App\Http\Controllers\Api\ProductController::class, 'index']);
     Route::post('/addresses', [App\Http\Controllers\Api\AddressController::class, 'store']);
+    Route::get('/saved-addresses', [App\Http\Controllers\Api\AddressController::class, 'index']);
 
     Route::get('/cart', [App\Http\Controllers\Api\CartOrderController::class, 'getCart']);
+ Route::post('/cart/add', [CartOrderController::class, 'addToCart']);
     Route::post('/cart/update', [App\Http\Controllers\Api\CartOrderController::class, 'updateQuantity']);
     Route::delete('/cart/remove/{productId}', [App\Http\Controllers\Api\CartOrderController::class, 'removeFromCart']);
     Route::post('/orders/place', [App\Http\Controllers\Api\CartOrderController::class, 'placeOrder']);

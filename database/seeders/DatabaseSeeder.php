@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
      $this->call([
         DriverSeeder::class,
         OrderSeeder::class,
+        ProductSeeder::class,
     ]);
     }
 }

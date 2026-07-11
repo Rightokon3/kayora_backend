@@ -26,4 +26,13 @@ class AddressController extends Controller
             'address' => $address
         ], 201);
     }
+    public function index(Request $request)
+{
+    $addresses = $request->user()
+        ->addresses() // assumes a hasMany relationship on the User model — see step 3
+        ->orderByDesc('created_at')
+        ->get();
+
+    return response()->json(['success' => true, 'addresses' => $addresses]);
+}
 }
