@@ -1,6 +1,5 @@
 <?php
 
-// app/Services/HaversineService.php
 namespace App\Services;
 
 class HaversineService

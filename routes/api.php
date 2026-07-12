@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\DriverLocationController;
 use App\Http\Controllers\Api\DriverTaskController;
 use App\Http\Controllers\Api\DriverStatsController;
 use App\Http\Controllers\Api\CartOrderController;
+use App\Http\Controllers\Api\DriverOrderController;
 /* ============================================================
    CUSTOMER / USER APP — unprefixed, its own auth guard via User model
 ============================================================ */
@@ -72,6 +73,13 @@ Route::post('/tasks/{order}/start', [DriverTaskController::class, 'start']);
 Route::post('/tasks/{order}/complete', [DriverTaskController::class, 'complete']);
 
 Route::get('/stats/today', [DriverStatsController::class, 'today']);
+  Route::get('/orders', [DriverOrderController::class, 'index']);
+    Route::get('/orders/{order}', [DriverOrderController::class, 'show']);
+    Route::post('/orders/{order}/accept', [DriverOrderController::class, 'accept']);
+    Route::post('/orders/{order}/decline', [DriverOrderController::class, 'decline']);
+    Route::post('/orders/{order}/start', [DriverOrderController::class, 'start']);
+    Route::post('/orders/{order}/complete', [DriverOrderController::class, 'complete']);
+    Route::get('/orders/{order}/track', [DriverOrderController::class, 'track']);
     });
     
 });

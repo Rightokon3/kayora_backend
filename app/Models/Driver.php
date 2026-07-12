@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
-class Driver extends Model
+class Driver extends Authenticatable
 {
-    use HasApiTokens; 
+    use HasApiTokens;
+
     protected $fillable = [
         'driver_id',
         'name',
@@ -16,23 +17,33 @@ class Driver extends Model
         'phone',
         'vehicle',
         'plate_number',
+        // These four were missing before — that's why duty_status and
+        // current_latitude/current_longitude silently never saved despite
+        // updateOrCreate()/update() calls "succeeding" with no error.
+        'duty_status',
+        'current_latitude',
+        'current_longitude',
+        'last_seen_at',
     ];
 
-    protected $hidden = [
-        'password',
-        'remember_token',
+    protected $hidden = ['password', 'remember_token'];
+
+    protected $casts = [
+        'last_seen_at' => 'datetime',
     ];
+
     public function profile()
-{
-    return $this->hasOne(DriverProfile::class);
-}
+    {
+        return $this->hasOne(DriverProfile::class);
+    }
 
-public function vehicle()
-{
-    return $this->hasOne(Vehicle::class, 'assigned_driver_id');
-}
-public function orders()
-{
-    return $this->hasMany(Order::class);
-}
+    public function vehicleAssignment()
+    {
+        return $this->hasOne(Vehicle::class, 'assigned_driver_id');
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
 }
