@@ -90,6 +90,9 @@ class CartOrderController extends Controller
             'paymentMethod'          => 'required|in:cash,card',
             'deliveryTiming'         => 'required|in:asap,scheduled',
             'deliveryDateTime'       => 'required',
+            // NEW: required only for ASAP orders — the driver the customer picked
+            // themselves, instead of the order being broadcast to every online driver.
+            'driverId'               => 'nullable|required_if:deliveryTiming,asap|integer|exists:drivers,id',
             'cartItems'              => 'required|array',
             'cartItems.*.productId'  => 'required|integer',
             'cartItems.*.quantity'   => 'required|integer|min:1',
@@ -119,9 +122,15 @@ class CartOrderController extends Controller
                 ->firstOrFail();
 
             $deliveryDateTime = Carbon::parse($validated['deliveryDateTime']);
+            $isAsap = $validated['deliveryTiming'] === 'asap';
 
             $order = Order::create([
                 'order_number'      => 'ORD-' . strtoupper(uniqid()),
+                // Assign the customer-picked driver straight to the order for
+                // ASAP deliveries — skipping the offered_driver_id "offer and
+                // wait for acceptance" step entirely, since the customer has
+                // already made the choice. Scheduled orders stay unassigned.
+                'driver_id'         => $isAsap ? $validated['driverId'] : null,
                 'customer_name'     => $user->name,
                 'customer_phone'    => $user->phone ?? '',
                 'customer_email'    => $user->email,
@@ -130,14 +139,21 @@ class CartOrderController extends Controller
                 'latitude'          => $address->latitude,
                 'longitude'         => $address->longitude,
                 'amount'            => $validated['total'],
-                'status'            => 'pending',
+                'status'            => $isAsap ? 'Assigned' : 'Pending',
                 'payment_method'    => $validated['paymentMethod'],
                 'payment_status'    => $validated['paymentMethod'] === 'cash' ? 'pending' : 'paid',
-                'delivery_type'     => $validated['deliveryTiming'],
+                'delivery_type'     => $isAsap ? 'Instant' : 'Scheduled',
                 'scheduled_date'    => $deliveryDateTime->toDateString(),
                 'scheduled_time'    => $deliveryDateTime->toTimeString(),
-                'priority'          => 'normal',
+                'priority'          => 'Normal',
+                'assigned_at'       => $isAsap ? now() : null,
             ]);
+
+            // No further driver-status mutation needed here — the
+            // whereNotIn(...) subquery in DriverDiscoveryController::nearby()
+            // already excludes this driver from future picks by checking for
+            // this exact active order, so their duty_status (their own shift
+            // toggle) is left untouched.
 
             // Persist each cart line as its own OrderItem row via the items() relation.
             // OrderItem stores a denormalized snapshot (bottle_name, size, subtotal),

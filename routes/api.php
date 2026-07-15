@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\DriverTaskController;
 use App\Http\Controllers\Api\DriverStatsController;
 use App\Http\Controllers\Api\CartOrderController;
 use App\Http\Controllers\Api\DriverOrderController;
+use App\Http\Controllers\Api\DriverDiscoveryController;
 /* ============================================================
    CUSTOMER / USER APP — unprefixed, its own auth guard via User model
 ============================================================ */
@@ -31,7 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/saved-addresses', [App\Http\Controllers\Api\AddressController::class, 'index']);
 
     Route::get('/cart', [App\Http\Controllers\Api\CartOrderController::class, 'getCart']);
- Route::post('/cart/add', [CartOrderController::class, 'addToCart']);
+    Route::post('/cart/add', [CartOrderController::class, 'addToCart']);
     Route::post('/cart/update', [App\Http\Controllers\Api\CartOrderController::class, 'updateQuantity']);
     Route::delete('/cart/remove/{productId}', [App\Http\Controllers\Api\CartOrderController::class, 'removeFromCart']);
     Route::post('/orders/place', [App\Http\Controllers\Api\CartOrderController::class, 'placeOrder']);
@@ -42,6 +43,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders/{id}/track', [App\Http\Controllers\Api\OrderController::class, 'track']);
 
     Route::post('/distributor/apply', [App\Http\Controllers\Api\DistributorController::class, 'submitApplication']);
+
+    // Customer-facing: used by my-cart.tsx to let the customer pick a
+    // driver for ASAP delivery. Uses the customer's own auth:sanctum
+    // guard — it must NOT live under the /driver prefix group below,
+    // since that group is authenticated as a Driver, not a User.
+    Route::get('/drivers/nearby', [DriverDiscoveryController::class, 'nearby']);
 });
 
 /* ============================================================
@@ -65,21 +72,21 @@ Route::prefix('driver')->group(function () {
 
         Route::get('/vehicle', [VehicleController::class, 'myVehicle']);
         Route::post('/status', [DriverStatusController::class, 'update']);
-Route::post('/location', [DriverLocationController::class, 'update']);
+        Route::post('/location', [DriverLocationController::class, 'update']);
 
-Route::get('/tasks/today', [DriverTaskController::class, 'today']);
-Route::get('/tasks/{order}', [DriverTaskController::class, 'show']);
-Route::post('/tasks/{order}/start', [DriverTaskController::class, 'start']);
-Route::post('/tasks/{order}/complete', [DriverTaskController::class, 'complete']);
+        Route::get('/tasks/today', [DriverTaskController::class, 'today']);
+        Route::get('/tasks/{order}', [DriverTaskController::class, 'show']);
+        Route::post('/tasks/{order}/start', [DriverTaskController::class, 'start']);
+        Route::post('/tasks/{order}/complete', [DriverTaskController::class, 'complete']);
 
-Route::get('/stats/today', [DriverStatsController::class, 'today']);
-  Route::get('/orders', [DriverOrderController::class, 'index']);
-    Route::get('/orders/{order}', [DriverOrderController::class, 'show']);
-    Route::post('/orders/{order}/accept', [DriverOrderController::class, 'accept']);
-    Route::post('/orders/{order}/decline', [DriverOrderController::class, 'decline']);
-    Route::post('/orders/{order}/start', [DriverOrderController::class, 'start']);
-    Route::post('/orders/{order}/complete', [DriverOrderController::class, 'complete']);
-    Route::get('/orders/{order}/track', [DriverOrderController::class, 'track']);
+        Route::get('/stats/today', [DriverStatsController::class, 'today']);
+        Route::get('/orders', [DriverOrderController::class, 'index']);
+        Route::get('/orders/{order}', [DriverOrderController::class, 'show']);
+        Route::post('/orders/{order}/accept', [DriverOrderController::class, 'accept']);
+        Route::post('/orders/{order}/decline', [DriverOrderController::class, 'decline']);
+        Route::post('/orders/{order}/start', [DriverOrderController::class, 'start']);
+        Route::post('/orders/{order}/complete', [DriverOrderController::class, 'complete']);
+        Route::get('/orders/{order}/track', [DriverOrderController::class, 'track']);
+        Route::get('/tasks/performance', [DriverStatsController::class, 'performance']);
     });
-    
 });
