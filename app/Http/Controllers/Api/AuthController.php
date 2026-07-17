@@ -56,17 +56,25 @@ class AuthController extends Controller
             'email' => 'required|email|unique:users',
             'phone' => 'required',
             'password' => 'required|min:8|confirmed', // expects 'password_confirmation' from frontend
+            'profile_picture' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120', // 5MB, matches app-side check
         ]);
 
         $imageUrl = null;
 
         // 2. Handle Cloudinary Upload securely if file exists
         if ($request->hasFile('profile_picture')) {
-  $upload = Cloudinary::upload($request->file('profile_picture')->getRealPath(), [
-         'folder' => 'kayora/profile_pictures'
-            ]);
-            $imageUrl = $upload->getSecurePath();
-    }
+            try {
+                $upload = Cloudinary::uploadApi()->upload($request->file('profile_picture')->getRealPath(), [
+                    'folder' => 'kayora/profile_pictures',
+                ]);
+                $imageUrl = $upload['secure_url'];
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'We could not upload your profile picture. Please try again.',
+                ], 502);
+            }
+        }
 
         // 3. Create the user using the imported User model
         $user = User::create([
