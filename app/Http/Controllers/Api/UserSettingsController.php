@@ -59,22 +59,29 @@ class UserSettingsController extends Controller
 
         // 3. Handle Cloudinary base64/file upload if modified
         $imageUrl = $user->profile_picture;
-        if ($request->has('profile_picture_base64') && !empty($request->input('profile_picture_base64'))) {
-            $base64Image = $request->input('profile_picture_base64');
-            if (!preg_match('/^data:image\/[a-zA-Z]+;base64,/', $base64Image)) {
-                $base64Image = 'data:image/jpeg;base64,' . $base64Image;
+        try {
+            if ($request->has('profile_picture_base64') && !empty($request->input('profile_picture_base64'))) {
+                $base64Image = $request->input('profile_picture_base64');
+                if (!preg_match('/^data:image\/[a-zA-Z]+;base64,/', $base64Image)) {
+                    $base64Image = 'data:image/jpeg;base64,' . $base64Image;
+                }
+                $upload = Cloudinary::uploadApi()->upload($base64Image, [
+                    'folder' => 'kayora/profile_pictures',
+                ]);
+                $imageUrl = $upload['secure_url'];
+            } elseif ($request->hasFile('profile_picture')) {
+                $upload = Cloudinary::uploadApi()->upload($request->file('profile_picture')->getRealPath(), [
+                    'folder' => 'kayora/profile_pictures',
+                ]);
+                $imageUrl = $upload['secure_url'];
+            } elseif ($request->input('remove_picture') == true || $request->input('remove_picture') == 1) {
+                $imageUrl = null;
             }
-            $upload = Cloudinary::upload($base64Image, [
-                'folder' => 'kayora/profile_pictures'
-            ], 'upload', 'image');
-            $imageUrl = $upload->getSecurePath();
-        } elseif ($request->hasFile('profile_picture')) {
-            $upload = Cloudinary::upload($request->file('profile_picture')->getRealPath(), [
-                'folder' => 'kayora/profile_pictures'
-            ], 'upload', 'image');
-            $imageUrl = $upload->getSecurePath();
-        } elseif ($request->input('remove_picture') == true || $request->input('remove_picture') == 1) {
-            $imageUrl = null;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'We could not update your profile picture. Please try again.',
+            ], 502);
         }
 
         $user->update([
