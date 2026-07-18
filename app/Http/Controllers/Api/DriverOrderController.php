@@ -17,6 +17,15 @@ class DriverOrderController extends Controller
 
         // Everything actually assigned to me, PLUS any ASAP order currently
         // offered to me and awaiting my accept/decline.
+        //
+        // NOTE: intentionally returning raw Eloquent JSON here (snake_case),
+        // NOT a hand-built camelCase array — DriverOrdersService.ts's own
+        // mapOrder()/mapItem() already do that conversion on the frontend.
+        // Converting here too was the bug: it fed already-camelCase JSON
+        // into code that was looking for raw.customer_name, raw.order_number,
+        // etc., so anything with an actual case difference came back
+        // undefined while single-word fields (status, priority, quantity)
+        // happened to look fine either way.
         $orders = Order::with('items')
             ->where(function ($query) use ($driverId) {
                 $query->where('driver_id', $driverId)
@@ -37,13 +46,25 @@ class DriverOrderController extends Controller
 
     public function accept(Request $request, Order $order)
     {
-        abort_unless($order->offered_driver_id === $request->user()->id, 403, 'This order was not offered to you.');
+        $driverId = $request->user()->id;
+
+        // Two valid paths to accept an order:
+        // (1) Legacy broadcast flow — order was offered to this driver via
+        //     offered_driver_id, awaiting a response.
+        // (2) New flow — the customer picked this driver directly at
+        //     checkout, so driver_id is already set and status is
+        //     'Assigned', with no offer step. Either way, the driver
+        //     hasn't confirmed yet, so both are acceptable here.
+        $isOfferedToMe = $order->offered_driver_id === $driverId;
+        $isDirectlyAssignedToMe = $order->driver_id === $driverId && $order->status === 'Assigned';
+
+        abort_unless($isOfferedToMe || $isDirectlyAssignedToMe, 403, 'This order was not offered to you.');
 
         $order->update([
-            'driver_id' => $request->user()->id,
+            'driver_id' => $driverId,
             'offered_driver_id' => null,
-            'status' => 'Assigned',
-            'assigned_at' => now(),
+            'status' => 'Accepted',
+            'assigned_at' => $order->assigned_at ?? now(),
         ]);
 
         return response()->json($order->load('items'));
@@ -51,14 +72,33 @@ class DriverOrderController extends Controller
 
     public function decline(Request $request, Order $order)
     {
-        abort_unless($order->offered_driver_id === $request->user()->id, 403, 'This order was not offered to you.');
+        $driverId = $request->user()->id;
 
-        $order->declines()->create(['driver_id' => $request->user()->id]);
-        $order->update(['offered_driver_id' => null]);
+        $isOfferedToMe = $order->offered_driver_id === $driverId;
+        $isDirectlyAssignedToMe = $order->driver_id === $driverId && $order->status === 'Assigned';
 
-        // Immediately try the next nearest driver — this is what makes ASAP
-        // dispatch actually keep moving instead of stalling on one decline.
-        app(OrderDispatchService::class)->offerToNearestDriver($order->fresh());
+        abort_unless($isOfferedToMe || $isDirectlyAssignedToMe, 403, 'This order was not offered to you.');
+
+        $order->declines()->create(['driver_id' => $driverId]);
+
+        if ($isDirectlyAssignedToMe) {
+            // ⚠️ Confirm this is the behavior you want: the customer
+            // specifically picked this driver, so there's no "offer the
+            // next nearest driver" fallback to reach for. This clears the
+            // assignment and puts the order back to Pending.
+            $order->update([
+                'driver_id' => null,
+                'status' => 'Pending',
+                'assigned_at' => null,
+            ]);
+        } else {
+            $order->update(['offered_driver_id' => null]);
+
+            // Immediately try the next nearest driver — this is what makes
+            // ASAP dispatch actually keep moving instead of stalling on
+            // one decline.
+            app(OrderDispatchService::class)->offerToNearestDriver($order->fresh());
+        }
 
         return response()->json(['message' => 'Order declined']);
     }
