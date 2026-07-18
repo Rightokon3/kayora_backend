@@ -10,7 +10,7 @@ class DriverProfileController extends Controller
 {
     public function show(Request $request)
     {
-        $driver = $request->user()->load('profile', 'vehicle');
+        $driver = $request->user()->load('profile', 'vehicleAssignment');
 
         return response()->json([
             'driver' => [
@@ -19,9 +19,10 @@ class DriverProfileController extends Controller
                 'name' => $driver->name,
                 'email' => $driver->email,
                 'phone' => $driver->phone,
+                'dutyStatus' => $driver->duty_status,
             ],
             'profile' => $driver->profile,
-            'vehicle' => $driver->vehicle,
+            'vehicle' => $driver->vehicleAssignment,
         ]);
     }
 

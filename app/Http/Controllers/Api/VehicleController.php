@@ -10,7 +10,7 @@ class VehicleController extends Controller
 {
     public function myVehicle(Request $request)
     {
-        $vehicle = $request->user()->vehicle;
+        $vehicle = $request->user()->vehicleAssignment;
 
         if (!$vehicle) {
             return response()->json(['message' => 'No vehicle currently assigned.'], 404);
