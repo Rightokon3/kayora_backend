@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AdminAuthController;
+use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\DriverAuthController;
 use App\Http\Controllers\Api\DriverProfileController;
 use App\Http\Controllers\Api\VehicleController;
@@ -13,6 +15,7 @@ use App\Http\Controllers\Api\CartOrderController;
 use App\Http\Controllers\Api\DriverOrderController;
 use App\Http\Controllers\Api\DriverDiscoveryController;
 use App\Http\Controllers\Driver\DriverAccountController;
+
 /* ============================================================
    CUSTOMER / USER APP — unprefixed, its own auth guard via User model
 ============================================================ */
@@ -113,5 +116,48 @@ Route::prefix('driver')->group(function () {
         Route::post('/orders/{order}/start', [DriverOrderController::class, 'start']);
         Route::post('/orders/{order}/complete', [DriverOrderController::class, 'complete']);
         Route::get('/orders/{order}/track', [DriverOrderController::class, 'track']);
+    });
+});
+
+/* ============================================================
+   ADMIN PANEL — everything under /api/admin/*, own auth guard
+   via the Admin model. Kept completely separate from both the
+   customer group (unprefixed, User model) and the driver group
+   (/api/driver/*, Driver model) above — no shared routes, no
+   shared controllers. auth:sanctum alone would accept ANY valid
+   token regardless of which model it belongs to, so every
+   protected route below also runs through the `admin.guard`
+   middleware (EnsureAdmin), which rejects the request unless the
+   token's owner is actually an Admin instance — this is what
+   stops a driver's or customer's token from being usable here.
+============================================================ */
+Route::prefix('admin')->group(function () {
+    Route::post('/login', [AdminAuthController::class, 'login']);
+
+    Route::middleware(['auth:sanctum', 'admin.guard'])->group(function () {
+        Route::post('/logout', [AdminAuthController::class, 'logout']);
+        Route::get('/me', [AdminAuthController::class, 'me']);
+
+        Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+        Route::get('/dashboard/revenue-monthly', [DashboardController::class, 'monthlyRevenue']);
+        Route::get('/dashboard/orders-weekly', [DashboardController::class, 'weeklyOrders']);
+        Route::get('/dashboard/order-categories', [DashboardController::class, 'orderCategories']);
+        Route::get('/dashboard/recent-orders', [DashboardController::class, 'recentOrders']);
+        Route::post('/dashboard/revenue', [DashboardController::class, 'storeRevenue']);
+
+        // IMPORTANT: /customers/inactivation-requests must be registered
+        // before /customers/{id} — same wildcard-ordering issue already
+        // hit once with /tasks/performance vs /tasks/{order}. Without
+        // this order, "inactivation-requests" would get swallowed as if
+        // it were a literal {id} value.
+        Route::get('/customers/inactivation-requests', [\App\Http\Controllers\Api\Admin\CustomerController::class, 'inactivationRequests']);
+        Route::delete('/customers/inactivation-requests/{id}', [\App\Http\Controllers\Api\Admin\CustomerController::class, 'resolveInactivationRequest']);
+        Route::get('/customers', [\App\Http\Controllers\Api\Admin\CustomerController::class, 'index']);
+        Route::delete('/customers/{id}', [\App\Http\Controllers\Api\Admin\CustomerController::class, 'destroy']);
+
+        // Future admin-panel endpoints (managing drivers, customers,
+        // products, distributors, notifications, other admins, etc.) all
+        // register here, under this same guarded group — never mixed
+        // into the customer or driver groups above.
     });
 });

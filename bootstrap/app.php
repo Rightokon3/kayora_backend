@@ -13,9 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
-        //
-    })
+->withMiddleware(function (Middleware $middleware) {
+    $middleware->alias([
+        'admin.guard' => \App\Http\Middleware\EnsureAdmin::class,
+    ]);
+})
     ->withExceptions(function (Exceptions $exceptions): void {
         // This app has no web login route — it's API-only for both the
         // customer and driver apps. Without this, an unauthenticated
