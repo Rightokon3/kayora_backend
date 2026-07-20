@@ -155,6 +155,28 @@ Route::prefix('admin')->group(function () {
         Route::get('/customers', [\App\Http\Controllers\Api\Admin\CustomerController::class, 'index']);
         Route::delete('/customers/{id}', [\App\Http\Controllers\Api\Admin\CustomerController::class, 'destroy']);
 
+        // IMPORTANT: /vehicles/assignable must be registered before any
+        // /vehicles/{vehicle} wildcard route, same wildcard-ordering
+        // reason as /tasks/performance and /customers/inactivation-requests
+        // above.
+        Route::get('/vehicles/assignable', [\App\Http\Controllers\Api\Admin\VehicleController::class, 'assignable']);
+        Route::get('/vehicles/{vehicle}', [\App\Http\Controllers\Api\Admin\VehicleController::class, 'show']);
+
+        Route::get('/drivers', [\App\Http\Controllers\Api\Admin\DriverController::class, 'index']);
+        Route::post('/drivers', [\App\Http\Controllers\Api\Admin\DriverController::class, 'store']);
+        Route::get('/drivers/{driver}', [\App\Http\Controllers\Api\Admin\DriverController::class, 'show']);
+        Route::put('/drivers/{driver}', [\App\Http\Controllers\Api\Admin\DriverController::class, 'update']);
+        Route::delete('/drivers/{driver}', [\App\Http\Controllers\Api\Admin\DriverController::class, 'destroy']);
+        Route::patch('/drivers/{driver}/password', [\App\Http\Controllers\Api\Admin\DriverController::class, 'setPassword']);
+        Route::get('/drivers/{driver}/track', [\App\Http\Controllers\Api\Admin\DriverController::class, 'track']);
+
+        Route::post('/upload-image', [\App\Http\Controllers\Api\Admin\ImageUploadController::class, 'upload']);
+
+        Route::get('/products', [\App\Http\Controllers\Api\Admin\ProductController::class, 'index']);
+        Route::post('/products', [\App\Http\Controllers\Api\Admin\ProductController::class, 'store']);
+        Route::put('/products/{product}', [\App\Http\Controllers\Api\Admin\ProductController::class, 'update']);
+        Route::delete('/products/{product}', [\App\Http\Controllers\Api\Admin\ProductController::class, 'destroy']);
+
         // Future admin-panel endpoints (managing drivers, customers,
         // products, distributors, notifications, other admins, etc.) all
         // register here, under this same guarded group — never mixed
