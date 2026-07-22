@@ -166,6 +166,22 @@ Route::prefix('admin')->group(function () {
         // admin's phone.
         Route::post('/push-token', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'storeToken']);
 
+        // Manage Administrators (manage-admins.tsx) — Super
+        // Administrator only; AdminManagementController itself also
+        // enforces this server-side via ensureSuperAdmin(), since the
+        // frontend's AccessDeniedView is a UI convenience only.
+        //
+        // IMPORTANT: /admins/confirm-password must be registered BEFORE
+        // /admins/{admin} — same wildcard-ordering issue already hit
+        // with /tasks/performance and /customers/inactivation-requests
+        // elsewhere in this file. Without this order, "confirm-password"
+        // would get swallowed as if it were a literal {admin} id.
+        Route::get('/admins', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'index']);
+        Route::post('/admins', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'store']);
+        Route::post('/admins/confirm-password', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'confirmPassword']);
+        Route::put('/admins/{admin}', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'update']);
+        Route::delete('/admins/{admin}', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'destroy']);
+
         // IMPORTANT: /customers/inactivation-requests must be registered
         // before /customers/{id} — same wildcard-ordering issue already
         // hit once with /tasks/performance vs /tasks/{order}. Without
