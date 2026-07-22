@@ -38,9 +38,20 @@ class CustomerController extends Controller
             ->get()
             ->groupBy('user_id');
 
+        // Same N+1 avoidance for the distributor icon: one query for
+        // every customer's most recent distributor_applications row.
+        // Only the summary fields needed to decide whether/how to show
+        // the icon are sent here — the modal fetches full detail itself.
+        $applicationsByUser = DB::table('distributor_applications')
+            ->whereIn('user_id', $users->pluck('id'))
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy('user_id');
+
         return response()->json(
-            $users->map(function ($user) use ($addressesByUser) {
+            $users->map(function ($user) use ($addressesByUser, $applicationsByUser) {
                 $address = optional($addressesByUser->get($user->id))->first();
+                $application = optional($applicationsByUser->get($user->id))->first();
 
                 // addresses.address is one combined string (no separate
                 // street/city/state columns) — best-effort comma split.
@@ -59,6 +70,15 @@ class CustomerController extends Controller
                         'state' => $parts[2] ?? '',
                     ],
                     'joinedAt' => optional($user->created_at)->toIso8601String() ?? '',
+                    'isDistributor' => (bool) $user->is_distributor,
+                    // null when the user has never applied — the
+                    // frontend hides the distributor icon in that case.
+                    'distributorApplication' => $application ? [
+                        'id' => $application->id,
+                        'status' => $application->status,
+                        'businessName' => $application->business_name,
+                        'submittedAt' => $application->created_at,
+                    ] : null,
                 ];
             })->values()
         );

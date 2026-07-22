@@ -10,47 +10,7 @@ use Illuminate\Support\Facades\DB;
 class DistributorController extends Controller
 {
     // POST: Store incoming Application Forms
-    public function submitApplication(Request $request)
-    {
-        $validated = $request->validate([
-            'fullName' => 'required|string|max:255',
-            'businessName' => 'required|string|max:255',
-            'businessType' => 'required|string',
-            'city' => 'required|string',
-            'lga' => 'required|string',
-            'state' => 'required|string',
-            'phone' => 'required|string',
-            'whatsapp' => 'nullable|string',
-            'email' => 'required|email',
-            'estimatedMonthlyVolume' => 'required|string',
-            'yearsInBusiness' => 'nullable|string',
-            'additionalInfo' => 'nullable|string',
-        ]);
 
-        DB::table('distributor_applications')->insert([
-            'user_id' => Auth::id(),
-            'full_name' => $validated['fullName'],
-            'business_name' => $validated['businessName'],
-            'business_type' => $validated['businessType'],
-            'city' => $validated['city'],
-            'lga' => $validated['lga'],
-            'state' => $validated['state'],
-            'phone' => $validated['phone'],
-            'whatsapp' => $request->whatsapp,
-            'email' => $validated['email'],
-            'estimated_monthly_volume' => $validated['estimatedMonthlyVolume'],
-            'years_in_business' => $request->yearsInBusiness,
-            'additional_info' => $request->additionalInfo,
-            'status' => 'pending',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Your form has been successfully submitted and will be reviewed.'
-        ]);
-    }
 
     // GET: Fetch Dynamic Contact metadata fields
     public function getShopInfo()
@@ -64,4 +24,43 @@ class DistributorController extends Controller
             'working_hours' => $settings['working_hours'] ?? "Mon - Fri: 8:00 AM - 5:00 PM\nSat: 9:00 AM - 2:00 PM",
         ]);
     }
+    public function __construct(private \App\Services\ExpoPushService $expoPush) {}
+
+public function submitApplication(Request $request)
+{
+    $data = $request->validate([
+        'fullName' => 'required|string|max:255',
+        'businessName' => 'required|string|max:255',
+        'businessType' => 'required|string|max:255',
+        'city' => 'required|string|max:255',
+        'lga' => 'required|string|max:255',
+        'state' => 'required|string|max:255',
+        'phone' => 'required|string|max:255',
+        'whatsapp' => 'nullable|string|max:255',
+        'email' => 'required|email|max:255',
+        'estimatedMonthlyVolume' => 'required|string|max:255',
+        'yearsInBusiness' => 'nullable|string|max:255',
+        'additionalInfo' => 'nullable|string',
+    ]);
+
+    $application = \App\Models\DistributorApplication::create([
+        'user_id' => $request->user()->id,
+        'full_name' => $data['fullName'],
+        'business_name' => $data['businessName'],
+        'business_type' => $data['businessType'],
+        'city' => $data['city'], 'lga' => $data['lga'], 'state' => $data['state'],
+        'phone' => $data['phone'], 'whatsapp' => $data['whatsapp'] ?? null,
+        'email' => $data['email'],
+        'estimated_monthly_volume' => $data['estimatedMonthlyVolume'],
+        'years_in_business' => $data['yearsInBusiness'] ?? null,
+        'additional_info' => $data['additionalInfo'] ?? null,
+        'status' => 'pending',
+    ]);
+
+    $this->expoPush->notifyAdmins('New distributor application',
+        "{$data['fullName']} applied to become a distributor.",
+        ['type' => 'distributor_application', 'applicationId' => $application->id]);
+
+    return response()->json(['success' => true]);
+}
 }

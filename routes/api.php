@@ -155,6 +155,20 @@ Route::prefix('admin')->group(function () {
         Route::get('/customers', [\App\Http\Controllers\Api\Admin\CustomerController::class, 'index']);
         Route::delete('/customers/{id}', [\App\Http\Controllers\Api\Admin\CustomerController::class, 'destroy']);
 
+        // Admin app registers its Expo push token here once, after the
+        // user grants notification permission (see
+        // hooks/useAdminPushNotifications.ts on the frontend).
+        Route::post('/push-token', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'storeToken']);
+
+        // Distributor applications — the icon in the customers table's
+        // actions column opens the modal that hits these. No literal
+        // route shares this prefix, so there's no {id}-before-literal
+        // ordering issue like /customers/inactivation-requests above,
+        // but keep that pattern in mind if you add one later.
+        Route::get('/distributor-applications/{id}', [\App\Http\Controllers\Api\Admin\DistributorApplicationController::class, 'show']);
+        Route::post('/distributor-applications/{id}/approve', [\App\Http\Controllers\Api\Admin\DistributorApplicationController::class, 'approve']);
+        Route::post('/distributor-applications/{id}/deny', [\App\Http\Controllers\Api\Admin\DistributorApplicationController::class, 'deny']);
+
         // IMPORTANT: /vehicles/assignable must be registered before any
         // /vehicles/{vehicle} wildcard route, same wildcard-ordering
         // reason as /tasks/performance and /customers/inactivation-requests
@@ -176,6 +190,16 @@ Route::prefix('admin')->group(function () {
         Route::post('/products', [\App\Http\Controllers\Api\Admin\ProductController::class, 'store']);
         Route::put('/products/{product}', [\App\Http\Controllers\Api\Admin\ProductController::class, 'update']);
         Route::delete('/products/{product}', [\App\Http\Controllers\Api\Admin\ProductController::class, 'destroy']);
+
+        // {orderNumber} is looked up against orders.order_number inside the
+        // controller (NOT Laravel's implicit route-model-binding on id) —
+        // the frontend's Order.id is the order_number string (e.g.
+        // "KYA-90001"), not the numeric primary key.
+        Route::get('/orders', [\App\Http\Controllers\Api\Admin\OrderController::class, 'index']);
+        Route::get('/orders/{orderNumber}/available-drivers', [\App\Http\Controllers\Api\Admin\OrderController::class, 'availableDrivers']);
+        Route::post('/orders/{orderNumber}/assign', [\App\Http\Controllers\Api\Admin\OrderController::class, 'assignDriver']);
+        Route::put('/orders/{orderNumber}', [\App\Http\Controllers\Api\Admin\OrderController::class, 'update']);
+        Route::delete('/orders/{orderNumber}', [\App\Http\Controllers\Api\Admin\OrderController::class, 'destroy']);
 
         // Future admin-panel endpoints (managing drivers, customers,
         // products, distributors, notifications, other admins, etc.) all
