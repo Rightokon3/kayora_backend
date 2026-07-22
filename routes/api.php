@@ -145,6 +145,27 @@ Route::prefix('admin')->group(function () {
         Route::get('/dashboard/recent-orders', [DashboardController::class, 'recentOrders']);
         Route::post('/dashboard/revenue', [DashboardController::class, 'storeRevenue']);
 
+        // NOTE: this settings/notifications block was previously
+        // registered twice in a row (harmless — the second copy was
+        // just dead/unreachable duplicate registration — but removed
+        // here to keep the route table clean). Only one copy needed.
+        Route::get('/settings/profile', [\App\Http\Controllers\Api\Admin\AdminSettingsController::class, 'getProfile']);
+        Route::put('/settings/profile', [\App\Http\Controllers\Api\Admin\AdminSettingsController::class, 'updateProfile']);
+        Route::patch('/settings/password', [\App\Http\Controllers\Api\Admin\AdminSettingsController::class, 'updatePassword']);
+        Route::patch('/settings/username', [\App\Http\Controllers\Api\Admin\AdminSettingsController::class, 'updateUsername']);
+        Route::get('/settings/notifications', [\App\Http\Controllers\Api\Admin\AdminSettingsController::class, 'getNotificationPreferences']);
+        Route::patch('/settings/notifications', [\App\Http\Controllers\Api\Admin\AdminSettingsController::class, 'updateNotificationPreferences']);
+        Route::get('/settings/system-info', [\App\Http\Controllers\Api\Admin\AdminSettingsController::class, 'getSystemInfo']);
+
+        Route::get('/notifications/events', [\App\Http\Controllers\Api\Admin\NotificationsEventsController::class, 'index']);
+
+        // Admin app registers its Expo push token here once, after the
+        // user grants notification permission (see
+        // hooks/useAdminPushNotifications.ts on the frontend). This is
+        // what lets new distributor-application submissions ping the
+        // admin's phone.
+        Route::post('/push-token', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'storeToken']);
+
         // IMPORTANT: /customers/inactivation-requests must be registered
         // before /customers/{id} — same wildcard-ordering issue already
         // hit once with /tasks/performance vs /tasks/{order}. Without
@@ -155,16 +176,11 @@ Route::prefix('admin')->group(function () {
         Route::get('/customers', [\App\Http\Controllers\Api\Admin\CustomerController::class, 'index']);
         Route::delete('/customers/{id}', [\App\Http\Controllers\Api\Admin\CustomerController::class, 'destroy']);
 
-        // Admin app registers its Expo push token here once, after the
-        // user grants notification permission (see
-        // hooks/useAdminPushNotifications.ts on the frontend).
-        Route::post('/push-token', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'storeToken']);
-
         // Distributor applications — the icon in the customers table's
-        // actions column opens the modal that hits these. No literal
-        // route shares this prefix, so there's no {id}-before-literal
-        // ordering issue like /customers/inactivation-requests above,
-        // but keep that pattern in mind if you add one later.
+        // and cards' actions section opens the modal that hits these.
+        // No literal route shares this prefix, so there's no
+        // {id}-before-literal ordering issue like the one above, but
+        // keep that pattern in mind if you add one later.
         Route::get('/distributor-applications/{id}', [\App\Http\Controllers\Api\Admin\DistributorApplicationController::class, 'show']);
         Route::post('/distributor-applications/{id}/approve', [\App\Http\Controllers\Api\Admin\DistributorApplicationController::class, 'approve']);
         Route::post('/distributor-applications/{id}/deny', [\App\Http\Controllers\Api\Admin\DistributorApplicationController::class, 'deny']);
