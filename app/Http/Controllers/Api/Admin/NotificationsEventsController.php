@@ -8,7 +8,7 @@ use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
-class NotificationEventsController extends Controller
+class NotificationsEventsController extends Controller
 {
     /**
      * GET /api/admin/notifications/events?since=ISO8601

@@ -170,19 +170,19 @@ Route::prefix('admin')->group(function () {
         // enforces this server-side via ensureSuperAdmin(), since the
         // frontend's AccessDeniedView is a UI convenience only.
         //
-        // IMPORTANT: /admins/confirm-password must be registered BEFORE
-        // /admins/{admin} — same wildcard-ordering issue already hit
-        // with /tasks/performance and /customers/inactivation-requests
-        // elsewhere in this file. Without this order, "confirm-password"
-        // would get swallowed as if it were a literal {admin} id.
+        // IMPORTANT: /admins/confirm-password and /admins/check-availability
+        // must both be registered BEFORE /admins/{admin} — same
+        // wildcard-ordering issue already hit with /tasks/performance and
+        // /customers/inactivation-requests elsewhere in this file. Without
+        // this order, either literal segment would get swallowed as if it
+        // were a literal {admin} id.
         Route::get('/admins', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'index']);
         Route::post('/admins', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'store']);
         Route::post('/admins/confirm-password', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'confirmPassword']);
+        Route::get('/admins/check-availability', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'checkAvailability']);
         Route::put('/admins/{admin}', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'update']);
         Route::delete('/admins/{admin}', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'destroy']);
-        Route::get('/admins', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'index']);
-        Route::get('/admins/check-availability', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'checkAvailability']);
-        Route::post('/admins', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'store']);
+
         // IMPORTANT: /customers/inactivation-requests must be registered
         // before /customers/{id} — same wildcard-ordering issue already
         // hit once with /tasks/performance vs /tasks/{order}. Without
@@ -201,13 +201,6 @@ Route::prefix('admin')->group(function () {
         Route::get('/distributor-applications/{id}', [\App\Http\Controllers\Api\Admin\DistributorApplicationController::class, 'show']);
         Route::post('/distributor-applications/{id}/approve', [\App\Http\Controllers\Api\Admin\DistributorApplicationController::class, 'approve']);
         Route::post('/distributor-applications/{id}/deny', [\App\Http\Controllers\Api\Admin\DistributorApplicationController::class, 'deny']);
-
-        // IMPORTANT: /vehicles/assignable must be registered before any
-        // /vehicles/{vehicle} wildcard route, same wildcard-ordering
-        // reason as /tasks/performance and /customers/inactivation-requests
-        // above.
-        Route::get('/vehicles/assignable', [\App\Http\Controllers\Api\Admin\VehicleController::class, 'assignable']);
-        Route::get('/vehicles/{vehicle}', [\App\Http\Controllers\Api\Admin\VehicleController::class, 'show']);
 
         Route::get('/drivers', [\App\Http\Controllers\Api\Admin\DriverController::class, 'index']);
         Route::post('/drivers', [\App\Http\Controllers\Api\Admin\DriverController::class, 'store']);
@@ -233,6 +226,28 @@ Route::prefix('admin')->group(function () {
         Route::post('/orders/{orderNumber}/assign', [\App\Http\Controllers\Api\Admin\OrderController::class, 'assignDriver']);
         Route::put('/orders/{orderNumber}', [\App\Http\Controllers\Api\Admin\OrderController::class, 'update']);
         Route::delete('/orders/{orderNumber}', [\App\Http\Controllers\Api\Admin\OrderController::class, 'destroy']);
+
+        // Manage Vehicles (manage-vehicles.tsx) — any admin can access
+        // this page (not Super-Administrator-only like Manage
+        // Administrators), the admin.guard middleware on the group above
+        // is the only check.
+        //
+        // IMPORTANT: /vehicles/assignable must be registered before
+        // /vehicles/{vehicle} — same wildcard-ordering issue as
+        // /admins/confirm-password vs /admins/{admin} above. This used to
+        // ALSO be registered as its own separate mini-block earlier in
+        // this file (right after distributor-applications) — that was a
+        // duplicate of the two lines below and has been removed; do not
+        // re-add a second /vehicles/assignable or /vehicles/{vehicle}
+        // registration anywhere else in this file.
+        Route::get('/vehicles', [\App\Http\Controllers\Api\Admin\VehicleController::class, 'index']);
+        Route::post('/vehicles', [\App\Http\Controllers\Api\Admin\VehicleController::class, 'store']);
+        Route::get('/vehicles/assignable', [\App\Http\Controllers\Api\Admin\VehicleController::class, 'assignable']);
+        Route::put('/vehicles/{vehicle}', [\App\Http\Controllers\Api\Admin\VehicleController::class, 'update']);
+        Route::delete('/vehicles/{vehicle}', [\App\Http\Controllers\Api\Admin\VehicleController::class, 'destroy']);
+        Route::post('/vehicles/{vehicle}/assign', [\App\Http\Controllers\Api\Admin\VehicleController::class, 'assign']);
+        Route::post('/vehicles/{vehicle}/unassign', [\App\Http\Controllers\Api\Admin\VehicleController::class, 'unassign']);
+        Route::get('/vehicles/{vehicle}', [\App\Http\Controllers\Api\Admin\VehicleController::class, 'show']);
 
         // Future admin-panel endpoints (managing drivers, customers,
         // products, distributors, notifications, other admins, etc.) all
