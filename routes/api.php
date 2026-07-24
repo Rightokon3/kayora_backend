@@ -15,7 +15,6 @@ use App\Http\Controllers\Api\CartOrderController;
 use App\Http\Controllers\Api\DriverOrderController;
 use App\Http\Controllers\Api\DriverDiscoveryController;
 use App\Http\Controllers\Driver\DriverAccountController;
-
 /* ============================================================
    CUSTOMER / USER APP — unprefixed, its own auth guard via User model
 ============================================================ */
@@ -181,7 +180,9 @@ Route::prefix('admin')->group(function () {
         Route::post('/admins/confirm-password', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'confirmPassword']);
         Route::put('/admins/{admin}', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'update']);
         Route::delete('/admins/{admin}', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'destroy']);
-
+        Route::get('/admins', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'index']);
+        Route::get('/admins/check-availability', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'checkAvailability']);
+        Route::post('/admins', [\App\Http\Controllers\Api\Admin\AdminManagementController::class, 'store']);
         // IMPORTANT: /customers/inactivation-requests must be registered
         // before /customers/{id} — same wildcard-ordering issue already
         // hit once with /tasks/performance vs /tasks/{order}. Without

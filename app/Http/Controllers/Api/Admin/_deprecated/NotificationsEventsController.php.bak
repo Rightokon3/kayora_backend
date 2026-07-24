@@ -1,0 +1,63 @@
+<?php
+
+namespace App\Http\Controllers\Api\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Driver;
+use App\Models\Order;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+
+class NotificationEventsController extends Controller
+{
+    /**
+     * GET /api/admin/notifications/events?since=ISO8601
+     * Polled every ~20s by the admin panel (see hooks/useAdminAlerts.ts)
+     * to drive real browser desktop notifications. This is NOT true
+     * real-time push — there's no WebSocket/broadcast server (Laravel
+     * Reverb/Pusher + Echo) in this project. If real push is wanted
+     * later, that infrastructure replaces this polling loop; the event
+     * shapes returned here would stay the same.
+     *
+     * driverUpdates is an approximation: there's no dedicated
+     * driver-status-change history table, so this surfaces any driver
+     * row whose `updated_at` changed since the last poll while currently
+     * on_duty — a reasonable proxy for "a driver just went active," but
+     * not a precise event log (e.g. it won't distinguish "just went
+     * on_duty" from "just moved location while already on_duty").
+     */
+    public function index(Request $request)
+    {
+        $since = $request->query('since');
+        $sinceDate = $since ? Carbon::parse($since) : now()->subMinutes(5);
+
+        $newOrders = Order::where('created_at', '>', $sinceDate)
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get(['order_number', 'customer_name', 'amount', 'created_at'])
+            ->map(fn ($o) => [
+                'orderNumber' => $o->order_number,
+                'customerName' => $o->customer_name,
+                'amount' => (float) $o->amount,
+                'createdAt' => $o->created_at->toIso8601String(),
+            ]);
+
+        $driverUpdates = Driver::where('updated_at', '>', $sinceDate)
+            ->where('duty_status', 'on_duty')
+            ->orderByDesc('updated_at')
+            ->limit(20)
+            ->get(['driver_id', 'name', 'duty_status', 'updated_at'])
+            ->map(fn ($d) => [
+                'driverId' => $d->driver_id,
+                'name' => $d->name,
+                'dutyStatus' => $d->duty_status,
+                'updatedAt' => $d->updated_at->toIso8601String(),
+            ]);
+
+        return response()->json([
+            'serverTime' => now()->toIso8601String(),
+            'newOrders' => $newOrders,
+            'driverUpdates' => $driverUpdates,
+        ]);
+    }
+}
