@@ -8,6 +8,12 @@ use Illuminate\Http\Request;
 
 class ImageUploadController extends Controller
 {
+    // ⚠️ TEMPORARY DEBUG BUILD — this controller currently logs verbose
+    // file/request details and returns raw exception/validation messages
+    // in the JSON response instead of generic ones. Revert to the plain
+    // version (no \Log:: calls, no 'errors' key, generic catch message)
+    // once the intermittent upload failure is found.
+
     /**
      * POST /api/admin/upload-image
      * Accepts multipart form-data with a `file` field, uploads it to
@@ -19,22 +25,46 @@ class ImageUploadController extends Controller
      */
     public function upload(Request $request)
     {
-        $request->validate([
-            // Deliberately using `mimes` (not the `image` rule) with the
-            // full extension list below. The `image` rule under the hood
-            // calls getimagesize()-style checks that don't reliably
-            // recognize newer formats like heic/avif on every server
-            // (depends on the GD/Imagick build), and it silently excludes
-            // formats like tiff/ico outright. `mimes` + `file` validates
-            // off the extension/mime the client actually sent, which
-            // Cloudinary can accept and transcode regardless of format.
-            'file' => [
-                'required',
-                'file',
-                'mimes:jpg,jpeg,png,gif,webp,bmp,svg,tif,tiff,heic,heif,avif,ico,apng',
-                'max:5120', // 5MB
-            ],
+        // --- TEMPORARY DEBUG LOGGING — remove once the intermittent
+        // upload failure is diagnosed.
+        \Log::info('[ImageUpload] incoming request', [
+            'has_file' => $request->hasFile('file'),
+            'all_files' => array_keys($request->allFiles()),
+            'content_type' => $request->header('Content-Type'),
         ]);
+
+        if ($request->hasFile('file')) {
+            $f = $request->file('file');
+            \Log::info('[ImageUpload] file details', [
+                'original_name' => $f->getClientOriginalName(),
+                'mime_type' => $f->getMimeType(),
+                'client_mime_type' => $f->getClientMimeType(),
+                'extension' => $f->getClientOriginalExtension(),
+                'size_kb' => round($f->getSize() / 1024, 1),
+                'is_valid' => $f->isValid(),
+                'error_code' => $f->getError(),
+            ]);
+        }
+        // --- end temporary debug logging
+
+        try {
+            $request->validate([
+                'file' => [
+                    'required',
+                    'file',
+                    'mimes:jpg,jpeg,png,gif,webp,bmp,svg,tif,tiff,heic,heif,avif,ico,apng',
+                    'max:5120', // 5MB
+                ],
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // TEMP: return the real validation errors instead of a generic one
+            \Log::warning('[ImageUpload] validation failed', ['errors' => $e->errors()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed (debug mode)',
+                'errors' => $e->errors(),
+            ], 422);
+        }
 
         try {
             $upload = Cloudinary::uploadApi()->upload($request->file('file')->getRealPath(), [
@@ -46,9 +76,14 @@ class ImageUploadController extends Controller
                 'url' => $upload['secure_url'],
             ]);
         } catch (\Exception $e) {
+            // TEMP: log full exception + return its message for debugging
+            \Log::error('[ImageUpload] Cloudinary upload failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Could not upload image. Please try again.',
+                'message' => 'Could not upload image (debug): ' . $e->getMessage(),
             ], 502);
         }
     }
