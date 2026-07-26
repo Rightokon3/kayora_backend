@@ -20,7 +20,20 @@ class ImageUploadController extends Controller
     public function upload(Request $request)
     {
         $request->validate([
-            'file' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120', // 5MB
+            // Deliberately using `mimes` (not the `image` rule) with the
+            // full extension list below. The `image` rule under the hood
+            // calls getimagesize()-style checks that don't reliably
+            // recognize newer formats like heic/avif on every server
+            // (depends on the GD/Imagick build), and it silently excludes
+            // formats like tiff/ico outright. `mimes` + `file` validates
+            // off the extension/mime the client actually sent, which
+            // Cloudinary can accept and transcode regardless of format.
+            'file' => [
+                'required',
+                'file',
+                'mimes:jpg,jpeg,png,gif,webp,bmp,svg,tif,tiff,heic,heif,avif,ico,apng',
+                'max:5120', // 5MB
+            ],
         ]);
 
         try {
