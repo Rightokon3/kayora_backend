@@ -32,13 +32,12 @@ class ProductController extends Controller
 
     /**
      * POST /api/admin/products
-     * This form only captures the simple marketplace-listing fields
-     * (name, description→tagline, size, price, image, available,
-     * status). The richer product-detail-page fields this table also
-     * holds (heroDesc, aboutBody, specs, regulatory, etc.) aren't part
-     * of this form, so they're filled with sensible defaults here —
-     * an admin can flesh those out later via a dedicated detail-page
-     * editor if one gets built.
+     * Covers the marketplace-listing fields (name, description→tagline,
+     * size, price, image, available, status) plus the three
+     * product-detail-page sections the admin form now also edits:
+     * usedFor, specs, regulatory. Everything else the detail page can
+     * show (heroDesc, aboutBody, orderTitle, etc.) still isn't part of
+     * this form, so those stay on sensible defaults here.
      */
     public function store(Request $request)
     {
@@ -55,10 +54,10 @@ class ProductController extends Controller
             'heroDesc' => $validated['description'] ?? '',
             'aboutTitle' => $validated['name'] . ' — In Detail',
             'aboutBody' => $validated['description'] ?? '',
-            'bestUsedTitle' => '',
-            'usedFor' => [],
-            'specs' => [],
-            'regulatory' => [],
+            'bestUsedTitle' => 'Best Used For',
+            'usedFor' => $validated['usedFor'] ?? [],
+            'specs' => $validated['specs'] ?? [],
+            'regulatory' => $validated['regulatory'] ?? [],
             'imageColor' => '#1E5FAF',
             'orderTitle' => 'Order the Kayora ' . $validated['size'] . ' ' . $validated['name'],
             'orderDesc' => $validated['description'] ?? '',
@@ -70,9 +69,9 @@ class ProductController extends Controller
 
     /**
      * PUT /api/admin/products/{product}
-     * Only touches the simple admin-facing fields — never overwrites
-     * heroDesc/aboutBody/specs/etc, so editing via this form can't
-     * silently wipe out existing product-detail-page content.
+     * Now also updates usedFor/specs/regulatory since the form edits
+     * them — everything else on the detail page (heroDesc, aboutBody,
+     * orderTitle, etc.) is still left untouched here.
      */
     public function update(Request $request, Product $product)
     {
@@ -86,6 +85,9 @@ class ProductController extends Controller
             'image_url' => $validated['imageUri'] ?? $product->image_url,
             'available' => $validated['available'] ?? $product->available,
             'status' => $validated['status'] ?? $product->status,
+            'usedFor' => $validated['usedFor'] ?? $product->usedFor,
+            'specs' => $validated['specs'] ?? $product->specs,
+            'regulatory' => $validated['regulatory'] ?? $product->regulatory,
         ]);
 
         return response()->json($this->transform($product));
@@ -110,6 +112,19 @@ class ProductController extends Controller
             'imageUri' => 'nullable|string',
             'available' => 'nullable|boolean',
             'status' => 'nullable|in:Active,Out of Stock,Draft',
+
+            'usedFor' => 'nullable|array',
+            'usedFor.*.title' => 'required_with:usedFor.*.description|string|max:255',
+            'usedFor.*.description' => 'nullable|string|max:500',
+
+            'specs' => 'nullable|array',
+            'specs.*.label' => 'required_with:specs.*.value|string|max:255',
+            'specs.*.value' => 'nullable|string|max:255',
+
+            'regulatory' => 'nullable|array',
+            'regulatory.*.label' => 'required_with:regulatory.*.value|string|max:255',
+            'regulatory.*.value' => 'nullable|string|max:255',
+            'regulatory.*.description' => 'nullable|string|max:500',
         ]);
     }
 
@@ -125,6 +140,9 @@ class ProductController extends Controller
             'available' => (bool) $product->available,
             'status' => $product->status,
             'createdAt' => optional($product->created_at)->toIso8601String() ?? '',
+            'usedFor' => is_array($product->usedFor) ? $product->usedFor : [],
+            'specs' => is_array($product->specs) ? $product->specs : [],
+            'regulatory' => is_array($product->regulatory) ? $product->regulatory : [],
         ];
     }
 }
