@@ -14,20 +14,36 @@ class DriverStatsController extends Controller
         $driverId = $request->user()->id;
         $today = now()->toDateString();
 
-        $todaysOrders = Order::where('driver_id', $driverId)
-            ->whereDate('created_at', $today);
+        // Each count is gated by the date column that's actually relevant to
+        // it, not by the order's created_at. created_at is when the customer
+        // originally placed the order — it can be any earlier date even when
+        // the admin assigns it to this driver today, or when the driver
+        // completes it today. Gating everything on created_at meant a
+        // delivery finished just now could still show up as 0 completed if
+        // the underlying order wasn't itself created today.
+        $completed = Order::where('driver_id', $driverId)
+            ->where('status', 'Delivered')
+            ->whereDate('completed_at', $today)
+            ->count();
 
-        $completed = (clone $todaysOrders)->where('status', 'Delivered')->count();
-        $active = (clone $todaysOrders)->where('status', 'Out For Delivery')->count();
-        $total = (clone $todaysOrders)->count();
-        $pending = $total - $completed - $active;
+        // Active/pending reflect the driver's CURRENT queue — these statuses
+        // are inherently "now", so they aren't date-gated at all.
+        $active = Order::where('driver_id', $driverId)
+            ->where('status', 'Out For Delivery')
+            ->count();
+
+        $pending = Order::where('driver_id', $driverId)
+            ->whereIn('status', ['Assigned', 'Preparing'])
+            ->count();
+
+        $total = $completed + $active + $pending;
 
         $stat = \App\Models\DriverDailyStat::where('driver_id', $driverId)->where('date', $today)->first();
 
         return response()->json([
             'todayDeliveries' => $total,
             'completed' => $completed,
-            'pending' => max(0, $pending),
+            'pending' => $pending,
             // Added for tasks.tsx's "Active Deliveries" card — dashboard.tsx
             // already ignores extra fields it doesn't use, so both screens
             // share this one endpoint instead of duplicating the query.

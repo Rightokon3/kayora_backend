@@ -11,10 +11,14 @@ class DriverTaskController extends Controller
 {
     public function today(Request $request)
     {
+        // No created_at date filter here on purpose: an order can be placed
+        // on one day and assigned to this driver by the admin on another,
+        // and it's still very much an active task for the driver right now.
+        // "Today's tasks" means "currently active tasks", not "orders whose
+        // original placement timestamp happens to fall on today's date".
         $orders = Order::with('items')
             ->where('driver_id', $request->user()->id)
             ->whereIn('status', ['Assigned', 'Out For Delivery', 'Preparing'])
-            ->whereDate('created_at', now()->toDateString())
             ->orderByDesc('priority')
             ->get();
 
